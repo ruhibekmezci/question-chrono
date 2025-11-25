@@ -61,4 +61,3 @@ Projede ikonlar için `lucide-react` ve stil için `Tailwind CSS` kullanılmış
 Fork'la, geliştir, PR at. "Şuraya bir de grafik eklesek fena olmazdı" dersen beklerim.
 
 ---
-*Gibi* dizisindeki Yılmaz'ın dediği gibi: "Bunu bu kadar büyütmeye gerek yok." Basit, işlevsel, bitti gitti.
