@@ -1,31 +1,64 @@
-# QuizChrono
+# ⏱️ Soru Süre Ölçer (Question Chrono)
 
-QuizChrono is a lightweight, browser-based timer designed to help you track the time spent on each question during quizzes, practice tests, or study sessions. Each time you move to a new question, QuizChrono records the elapsed time and lets you review your performance at the end. Questions exceeding 2 minutes are highlighted in red for quick reference.
+KPSS, YKS, ALES veya DGS... Hangi sınava hazırlanıyorsan hazırlan, en büyük düşmanın zaman. Bu proje, test çözerken her soruya ne kadar vakit ayırdığını takip etmeni sağlayan, klavye odaklı, pratik bir React uygulamasıdır.
 
-## Features
+"Hangi soruda takıldım?", "Ortalamam kaç?", "Toplam kaç dakika gitti?" dertlerine son.
 
-- **Start / Stop Timer**: Track total session time.
-- **New Question Tracking**: Press `Space` or click the timer to move to the next question.
-- **2-Minute Warning**: Automatically highlights questions exceeding 2 minutes.
-- **Undo / Reset**: Undo the last question or reset the entire session.
-- **Local Storage**: Saves your progress in the browser.
-- **Copy / Download**: Export your question times as CSV or copy to clipboard.
+## 🔥 Özellikler
 
-## Keyboard Shortcuts
+* **Klavye Odaklı Kontrol:** Fareye dokunmadan testi yönet.
+    * `Space`: Sonraki soruya geç.
+    * `S`: Sayacı durdur/başlat.
+    * `Backspace` / `U`: Yanlışlıkla geçiş yaptıysan geri al.
+    * `R`: Her şeyi sıfırla.
+* **Akıllı Kısayollar:** Soru etiketini değiştirmek için yazı yazarken `Space` tuşu sayacı tetiklemez (sinir krizi engellendi).
+* **Görsel Uyarı Sistemi:** Varsayılan olarak 120 saniyeyi (2 dk) geçen sorularda süre kırmızıya döner. Bu süreyi ayarlardan değiştirebilirsin.
+* **Veri Kaybı Yok:** Sayfayı yenilesen bile verilerin `localStorage` sayesinde korunur. Kaldığın yerden devam edersin.
+* **Analiz:** En hızlı, en yavaş ve ortalama çözüm sürelerini anlık gösterir.
+* **Dışa Aktarma:** Çözdüğün testin istatistiklerini Kopyala butonuyla alabilir veya CSV (Excel) formatında indirebilirsin.
+* **Performanslı:** Gereksiz render işlemlerinden arındırılmış, yağ gibi akan kod yapısı.
 
-- `Space` → Next Question  
-- `S` → Stop Timer  
-- `U` or `Backspace` → Undo Last Question  
-- `R` → Reset Timer  
+## 🚀 Kurulum ve Çalıştırma
 
-## Usage
+Bu proje tek bir React bileşeni olarak tasarlandı ama modern bir React ortamında (Vite, CRA, Next.js) çalıştırılması önerilir.
 
-1. Open `index.html` in any modern browser.
-2. Click **Start** to begin the timer.
-3. Use **Space** or click the timer to log a new question.
-4. Review the table to see durations for each question.
-5. Copy or download your data for record-keeping.
+### Gereksinimler
 
-## License
+Projede ikonlar için `lucide-react` ve stil için `Tailwind CSS` kullanılmıştır.
 
-MIT License
+1.  Paketleri yükle:
+    ```bash
+    npm install lucide-react
+    ```
+
+2.  Bileşeni (`QuestionStopwatch.jsx`) projene dahil et ve kullan:
+    ```jsx
+    import QuestionStopwatch from './QuestionStopwatch';
+
+    function App() {
+      return (
+        <QuestionStopwatch />
+      );
+    }
+    ```
+
+## 🎮 Kullanım Kılavuzu
+
+1.  **Başlat:** Sayfayı aç, "Başlat" butonuna bas veya manuel başla.
+2.  **Soru Çöz:** Soruyu çözdün mü? Yapıştır `Space` tuşuna. Süre kaydedilir, sayaç sıfırlanıp bir sonraki soru için akmaya başlar.
+3.  **Etiketle:** Tabloda "Soru 1" yazan yere tıklayıp "Matematik Zor Soru" gibi notlar alabilirsin.
+4.  **Bitir:** Test bitince ister tabloyu kopyala notlarına yapıştır, ister CSV olarak indir arşivle.
+
+## 🛠️ Kullanılan Teknolojiler
+
+* **React:** (Hooks: useState, useEffect, useMemo, useRef)
+* **Tailwind CSS:** Hızlı ve modern stillendirme.
+* **Lucide React:** Temiz ikon seti.
+* **LocalStorage API:** Veri kalıcılığı için.
+
+## 🤝 Katkıda Bulunma
+
+Fork'la, geliştir, PR at. "Şuraya bir de grafik eklesek fena olmazdı" dersen beklerim.
+
+---
+*Gibi* dizisindeki Yılmaz'ın dediği gibi: "Bunu bu kadar büyütmeye gerek yok." Basit, işlevsel, bitti gitti.
