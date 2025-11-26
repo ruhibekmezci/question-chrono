@@ -1,63 +1,50 @@
-# ⏱️ Soru Süre Ölçer (Question Chrono)
+# ⏱️ Soru Süre Ölçer Ultimate (Question Chrono)
 
-KPSS, YKS, ALES veya DGS... Hangi sınava hazırlanıyorsan hazırlan, en büyük düşmanın zaman. Bu proje, test çözerken her soruya ne kadar vakit ayırdığını takip etmeni sağlayan, klavye odaklı, pratik bir React uygulamasıdır.
+KPSS, YKS, ALES veya DGS... Hangi sınava hazırlanıyorsan hazırlan, en büyük düşmanın zaman. Bu proje, test çözerken her soruya ne kadar vakit ayırdığını takip etmeni sağlayan, **sesli uyarı sistemli**, **geri sayım modlu** ve kurulum gerektirmeyen pratik bir araçtır.
 
-"Hangi soruda takıldım?", "Ortalamam kaç?", "Toplam kaç dakika gitti?" dertlerine son.
+"Hangi soruda takıldım?", "Sınavı yetiştirebiliyor muyum?", "Ortalamam kaç?" dertlerine son. İndir ve çift tıkla; hepsi bu.
 
 ## 🔥 Özellikler
 
+* **İki Farklı Çalışma Modu:**
+    * **Kronometre (İleri Say):** Rahat çalışma seansları için.
+    * **Geri Sayım (Sınav Modu):** Gerçek sınav simülasyonu. Süre bittiğinde **otomatik durur ve alarm çalar.**
+* **Sesli ve Görsel Uyarı Sistemi:**
+    * Belirlenen soru limitini (örn: 120 sn) aştığında ekran **kırmızı** olur ve kısa bir **"Bip"** sesiyle uyarır.
+    * Sınav süresi bittiğinde **3 kez uzun alarm** çalarak kalemi bırakman gerektiğini hatırlatır.
 * **Klavye Odaklı Kontrol:** Fareye dokunmadan testi yönet.
     * `Space`: Sonraki soruya geç.
     * `S`: Sayacı durdur/başlat.
-    * `Backspace` / `U`: Yanlışlıkla geçiş yaptıysan geri al.
+    * `Backspace`: Yanlışlıkla geçiş yaptıysan son soruyu sil.
     * `R`: Her şeyi sıfırla.
-* **Akıllı Kısayollar:** Soru etiketini değiştirmek için yazı yazarken `Space` tuşu sayacı tetiklemez (sinir krizi engellendi).
-* **Görsel Uyarı Sistemi:** Varsayılan olarak 120 saniyeyi (2 dk) geçen sorularda süre kırmızıya döner. Bu süreyi ayarlardan değiştirebilirsin.
-* **Veri Kaybı Yok:** Sayfayı yenilesen bile verilerin `localStorage` sayesinde korunur. Kaldığın yerden devam edersin.
-* **Analiz:** En hızlı, en yavaş ve ortalama çözüm sürelerini anlık gösterir.
-* **Dışa Aktarma:** Çözdüğün testin istatistiklerini Kopyala butonuyla alabilir veya CSV (Excel) formatında indirebilirsin.
-* **Performanslı:** Gereksiz render işlemlerinden arındırılmış, yağ gibi akan kod yapısı.
+* **Detaylı Raporlama (.TXT):** Sadece süreleri değil; **Ders, Konu, Yayınevi** bilgilerini, limit aşan soruları, en hızlı/en yavaş çözülenleri içeren profesyonel bir rapor indirir.
+* **Akıllı Kısayollar:** Bilgi girişi yaparken (input alanlarında) kısayol tuşları devre dışı kalır, böylece yazı yazarken yanlışlıkla sayacı tetiklemezsin.
+* **Kurulumsuz:** Tek bir `.html` dosyasıdır. İnternet olmasa bile çalışır.
 
 ## 🚀 Kurulum ve Çalıştırma
 
-Bu proje tek bir React bileşeni olarak tasarlandı ama modern bir React ortamında (Vite, CRA, Next.js) çalıştırılması önerilir.
+Bu proje **"Single File Application"** (Tek Dosya Uygulaması) yapısındadır. Node.js, React veya sunucu kurulumuna gerek yoktur.
 
-### Gereksinimler
-
-Projede ikonlar için `lucide-react` ve stil için `Tailwind CSS` kullanılmıştır.
-
-1.  Paketleri yükle:
-    ```bash
-    npm install lucide-react
-    ```
-
-2.  Bileşeni (`QuestionStopwatch.jsx`) projene dahil et ve kullan:
-    ```jsx
-    import QuestionStopwatch from './QuestionStopwatch';
-
-    function App() {
-      return (
-        <QuestionStopwatch />
-      );
-    }
-    ```
+1.  `index.html` dosyasını indir.
+2.  Dosyaya çift tıkla.
+3.  Tarayıcında açılacaktır. İyi çalışmalar!
 
 ## 🎮 Kullanım Kılavuzu
 
-1.  **Başlat:** Sayfayı aç, "Başlat" butonuna bas veya manuel başla.
-2.  **Soru Çöz:** Soruyu çözdün mü? Yapıştır `Space` tuşuna. Süre kaydedilir, sayaç sıfırlanıp bir sonraki soru için akmaya başlar.
-3.  **Etiketle:** Tabloda "Soru 1" yazan yere tıklayıp "Matematik Zor Soru" gibi notlar alabilirsin.
-4.  **Bitir:** Test bitince ister tabloyu kopyala notlarına yapıştır, ister CSV olarak indir arşivle.
+1.  **Ayarları Yap:** Üst kısımdan **Ders, Konu** bilgilerini gir.
+2.  **Modu Seç:** Sadece soru mu çözeceksin yoksa 40 dakikalık bir deneme mi yapacaksın? Modu seç (Kronometre/Geri Sayım).
+3.  **Başlat:** `Başlat` butonuna bas veya klavyeden `S` tuşuna dokun.
+4.  **Soru Çöz:** Soruyu bitirince `Space` tuşuna bas. Süre kaydedilir ve sayaç sıfırlanıp yeni soru için akmaya başlar.
+5.  **Raporla:** Çalışman bitince **📥 .TXT İndir** butonuna basarak detaylı analizini al.
 
 ## 🛠️ Kullanılan Teknolojiler
 
-* **React:** (Hooks: useState, useEffect, useMemo, useRef)
-* **Tailwind CSS:** Hızlı ve modern stillendirme.
-* **Lucide React:** Temiz ikon seti.
-* **LocalStorage API:** Veri kalıcılığı için.
+* **HTML5 & CSS3:** Modern ve duyarlı (responsive) tasarım.
+* **Vanilla JavaScript (ES6+):** Harici kütüphane bağımlılığı yok. Saf ve hızlı kod.
+* **Web Audio API:** Harici ses dosyası yüklemeden, tarayıcının kendi içinde dijital sesler (Bip/Alarm) üretmesini sağlayan teknoloji.
 
-## 🤝 Katkıda Bulunma
+## 🤝 İpucu
 
-Fork'la, geliştir, PR at. "Şuraya bir de grafik eklesek fena olmazdı" dersen beklerim.
+Tarayıcın ses çalmaya izin vermezse sayfada herhangi bir yere (örneğin "Başlat" butonuna) bir kez tıklaman yeterlidir. Modern tarayıcılar kullanıcı etkileşimi olmadan ses çalınmasını engeller.
 
 ---
