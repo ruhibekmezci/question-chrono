@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soru Süre Ölçer Ultimate</title>
+    <style>
+        :root {
+            --bg-color: #0f0f0f;
+            --card-bg: #1a1a1a;
+            --text-main: #ffffff;
+            --text-muted: #888;
+            --accent: #00b894;
+            --primary: #0984e3;
+            --danger: #d63031;
+            --warning: #fdcb6e;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        /* Header & Inputs */
+        .header-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            align-items: end;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        input, select {
+            background: #2d3436;
+            border: 1px solid #444;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus { border-color: var(--primary); }
+        label { font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px; }
+
+        /* Main Display Area */
+        .timer-display {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            position: relative;
+            border: 1px solid transparent;
+            transition: border-color 0.3s;
+        }
+
+        .timer-display.finished {
+            border-color: var(--danger);
+        }
+
+        .total-timer {
+            font-size: 5rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        .total-timer.finished {
+            color: var(--danger);
+            animation: pulse 1s infinite;
+        }
+
+        .total-label { color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; }
+
+        .current-q-timer {
+            margin-top: 20px;
+            font-size: 2rem;
+            font-family: 'Courier New', monospace;
+            color: var(--accent);
+            transition: color 0.3s;
+        }
+        
+        .current-q-timer.over-limit {
+            color: var(--warning); /* Sarı uyarı */
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .current-label { color: var(--text-muted); font-size: 0.8rem; }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.1s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        button:active { transform: scale(0.96); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-start { background-color: var(--accent); }
+        .btn-next { background-color: var(--primary); }
+        .btn-stop { background-color: #636e72; }
+        .btn-reset { background-color: transparent; border: 1px solid #636e72; }
+        .btn-undo { background-color: transparent; border: 1px solid #d63031; color: #d63031; }
+        .btn-export { background-color: #2d3436; border: 1px solid var(--text-muted); margin-left: auto; }
+
+        /* Stats & Table */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .stat-val { font-size: 1.2rem; font-weight: bold; margin-top: 5px; }
+        .stat-title { color: var(--text-muted); font-size: 0.8rem; }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .results-table th, .results-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        .results-table th { background: #222; color: var(--text-muted); font-size: 0.9rem; }
+        .row-warning { color: var(--warning); }
+
+        /* Shortcuts Legend */
+        .shortcuts {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+        kbd {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid #555;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="shortcuts">
+        <kbd>Space</kbd> Yeni Soru | <kbd>S</kbd> Durdur | <kbd>R</kbd> Sıfırla | <kbd>Backspace</kbd> Son Soruyu Sil
+    </div>
+
+    <div class="header-inputs">
+        <div class="input-group">
+            <label>Çalışma Modu</label>
+            <select id="selMode" onchange="toggleMode()">
+                <option value="up">Kronometre (İleri Say)</option>
+                <option value="down">Geri Sayım (Sınav)</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label>Sınav Süresi (Dk)</label>
+            <input type="number" id="inpExamTime" value="40" disabled title="Sadece Geri Sayım modunda aktif">
+        </div>
+        <div class="input-group">
+            <label>Soru Limiti (Sn)</label>
+            <input type="number" id="inpLimit" value="120">
+        </div>
+        
+        <div class="input-group">
+            <label>Ders</label>
+            <input type="text" id="inpDers" placeholder="Matematik">
+        </div>
+        <div class="input-group">
+            <label>Konu</label>
+            <input type="text" id="inpKonu" placeholder="Türev">
+        </div>
+        <div class="input-group">
+            <label>Yayınevi</label>
+            <input type="text" id="inpYayin" placeholder="X Yayınları">
+        </div>
+    </div>
+
+    <div class="timer-display" id="mainDisplayBox">
+        <div class="total-timer" id="displayTotal">00:00.00</div>
+        <div class="total-label" id="lblTotalType">TOPLAM GEÇEN SÜRE</div>
+
+        <div class="current-q-timer" id="displayCurrent">00:00.00</div>
+        <div class="current-label">AKTİF SORU SÜRESİ</div>
+
+        <div class="controls">
+            <button class="btn-start" onclick="startTimer()">▶ Başlat</button>
+            <button class="btn-next" onclick="nextQuestion()">⏭ Yeni Soru (Space)</button>
+            <button class="btn-stop" onclick="stopTimer()">⏸ Durdur (S)</button>
+            <button class="btn-undo" onclick="undoLast()">↶ Geri Al</button>
+            <button class="btn-reset" onclick="resetAll()">↻ Sıfırla (R)</button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-title">Soru Sayısı</div>
+            <div class="stat-val" id="statCount">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">Ortalama Süre</div>
+            <div class="stat-val" id="statAvg">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">En Hızlı</div>
+            <div class="stat-val" id="statFast">-</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">En Yavaş</div>
+            <div class="stat-val" id="statSlow">-</div>
+        </div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h3 style="margin:0">Soru Detayları</h3>
+        <button class="btn-export" onclick="downloadTxt()">📥 .TXT İndir</button>
+    </div>
+
+    <table class="results-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Süre</th>
+                <th>Genel Süre</th>
+                <th>Durum</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            </tbody>
+    </table>
+    <div id="emptyMsg" style="text-align:center; padding:20px; color:#555;">Henüz kayıt yok.</div>
+</div>
+
+<script>
+    // --- Ses Sistemi (Audio Context) ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+
+    // Soru limiti uyarısı (Kısa Bip)
+    function playShortBeep() {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    // Sınav Bitiş Uyarısı (3 Kez Uzun Dııııt)
+    function playFinishAlarm() {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        
+        const now = audioCtx.currentTime;
+        
+        // 3 kez çalacak döngü
+        for (let i = 0; i < 3; i++) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            // Ayarlar: Düşük frekans (kalın ses) ve uzun süre
+            osc.type = 'sawtooth'; // Biraz daha cızırtılı/alarm gibi
+            osc.frequency.setValueAtTime(220, now + (i * 1.5)); // 220Hz = Kalın La
+            
+            // Ses seviyesi
+            gain.gain.setValueAtTime(0.2, now + (i * 1.5));
+            gain.gain.linearRampToValueAtTime(0.0001, now + (i * 1.5) + 1.0); // 1 saniye sürsün
+
+            osc.start(now + (i * 1.5));
+            osc.stop(now + (i * 1.5) + 1.0);
+        }
+    }
+
+    // --- Değişkenler ---
+    let interval = null;
+    let isRunning = false;
+    let isFinished = false; // Sınav süresi bitti mi?
+    
+    let totalStartTime = 0; 
+    let totalElapsedPause = 0; 
+    let lastPauseStart = 0; 
+
+    let questionStartTime = 0; 
+    let hasAlertedQuestion = false; // Soru limiti uyarısı çaldı mı?
+
+    let questions = []; 
+    
+    // Mod Değişkenleri
+    let isCountdown = false;
+    let examDurationMs = 0; // Geri sayım için toplam süre
+
+    // DOM Elementleri
+    const displayTotal = document.getElementById('displayTotal');
+    const displayCurrent = document.getElementById('displayCurrent');
+    const mainDisplayBox = document.getElementById('mainDisplayBox');
+    const inpLimit = document.getElementById('inpLimit');
+    const inpExamTime = document.getElementById('inpExamTime');
+    const selMode = document.getElementById('selMode');
+    const lblTotalType = document.getElementById('lblTotalType');
+
+    // --- Mod Değişimi ---
+    function toggleMode() {
+        resetAll(); // Mod değişince her şeyi sıfırla
+        if (selMode.value === 'down') {
+            isCountdown = true;
+            inpExamTime.disabled = false;
+            lblTotalType.innerText = "KALAN SINAV SÜRESİ";
+            
+            // Başlangıçta süreyi göster
+            let mins = parseInt(inpExamTime.value) || 40;
+            displayTotal.innerText = `${mins < 10 ? '0'+mins : mins}:00.00`;
+        } else {
+            isCountdown = false;
+            inpExamTime.disabled = true;
+            lblTotalType.innerText = "TOPLAM GEÇEN SÜRE";
+            displayTotal.innerText = "00:00.00";
+        }
+    }
+
+    // --- Formatlama ---
+    function formatTime(ms) {
+        if (ms < 0) ms = 0;
+        let date = new Date(ms);
+        let h = Math.floor(ms / 3600000);
+        let m = date.getUTCMinutes().toString().padStart(2, '0');
+        let s = date.getUTCSeconds().toString().padStart(2, '0');
+        let cs = Math.floor(date.getUTCMilliseconds() / 10).toString().padStart(2, '0');
+        
+        if (h > 0) return `${h}:${m}:${s}.${cs}`; // Saat varsa göster
+        return `${m}:${s}.${cs}`;
+    }
+
+    function formatTextDuration(ms) {
+        let totalSec = Math.floor(ms / 1000);
+        let m = Math.floor(totalSec / 60);
+        let s = totalSec % 60;
+        let parts = [];
+        if(m > 0) parts.push(`${m} dakika`);
+        parts.push(`${s} saniye`);
+        return parts.join(' ');
+    }
+
+    // --- Ana Döngü (Update) ---
+    function update() {
+        if (!isRunning) return;
+
+        const now = Date.now();
+        const elapsedSession = now - totalStartTime - totalElapsedPause; // Geçen gerçek süre
+        
+        // 1. Büyük Sayaç Mantığı
+        if (isCountdown) {
+            // Geri Sayım Modu
+            let remaining = examDurationMs - elapsedSession;
+            
+            if (remaining <= 0) {
+                // SÜRE BİTTİ
+                remaining = 0;
+                displayTotal.innerText = formatTime(0);
+                finishExam(); // Fonksiyonu çağır
+                return;
+            }
+            displayTotal.innerText = formatTime(remaining);
+        } else {
+            // Kronometre Modu
+            displayTotal.innerText = formatTime(elapsedSession);
+        }
+
+        // 2. Aktif Soru Süresi
+        const currentDuration = now - questionStartTime;
+        displayCurrent.innerText = formatTime(currentDuration);
+
+        // 3. Soru Limiti Kontrolü (Sadece bitmemişse)
+        if (!isFinished) {
+            const limitSec = parseInt(inpLimit.value) || 120;
+            if (currentDuration > limitSec * 1000) {
+                displayCurrent.classList.add('over-limit');
+                if(!hasAlertedQuestion) {
+                    playShortBeep();
+                    hasAlertedQuestion = true;
+                }
+            } else {
+                displayCurrent.classList.remove('over-limit');
+            }
+        }
+    }
+
+    // --- Süre Bittiğinde Çalışır ---
+    function finishExam() {
+        stopTimer();
+        isFinished = true;
+        
+        displayTotal.classList.add('finished');
+        mainDisplayBox.classList.add('finished');
+        
+        playFinishAlarm(); // 3 Kez Dııııt
+        
+        // Son soruyu otomatik kaydet? Genelde sınav bitince kalem bırakılır, son soru yarım kalır.
+        // İstersen buraya son soruyu kaydetme kodu ekleyebiliriz. Şimdilik durduruyoruz.
+    }
+
+    // --- Kontroller ---
+    function startTimer() {
+        if (isRunning || isFinished) return;
+        
+        // Geri sayım modundaysak süreyi al
+        if (isCountdown && totalStartTime === 0) {
+            let mins = parseInt(inpExamTime.value) || 1;
+            examDurationMs = mins * 60 * 1000;
+        }
+
+        const now = Date.now();
+        
+        if (totalStartTime === 0) {
+            totalStartTime = now;
+            questionStartTime = now;
+        } else {
+            const pauseDuration = now - lastPauseStart;
+            totalElapsedPause += pauseDuration;
+            questionStartTime += pauseDuration;
+        }
+
+        isRunning = true;
+        interval = setInterval(update, 30);
+        
+        // Görsel temizlik
+        displayTotal.classList.remove('finished');
+        mainDisplayBox.classList.remove('finished');
+    }
+
+    function stopTimer() {
+        if (!isRunning) return;
+        isRunning = false;
+        clearInterval(interval);
+        lastPauseStart = Date.now();
+    }
+
+    function nextQuestion() {
+        if (isFinished) return; // Sınav bittiyse yeni soruya geçilmez
+        if (!isRunning && totalStartTime === 0) {
+            startTimer();
+            return;
+        }
+
+        const now = Date.now();
+        let effectiveNow = isRunning ? now : lastPauseStart;
+        const duration = effectiveNow - questionStartTime;
+        
+        // Şu ana kadar geçen toplam süre (kronometre modundaysak direkt, geri sayımdaysak toplamdan kalanı çıkararak değil, geçen süreyi hesaplayarak)
+        const totalDurationSoFar = effectiveNow - totalStartTime - totalElapsedPause;
+
+        questions.push({
+            id: questions.length + 1,
+            duration: duration,
+            totalAtEnd: totalDurationSoFar
+        });
+
+        renderTable();
+        updateStats();
+
+        questionStartTime = effectiveNow; 
+        hasAlertedQuestion = false;
+        
+        displayCurrent.classList.remove('over-limit');
+        displayCurrent.innerText = "00:00.00";
+    }
+
+    function undoLast() {
+        if (questions.length === 0) return;
+        questions.pop();
+        renderTable();
+        updateStats();
+    }
+
+    function resetAll() {
+        stopTimer();
+        isRunning = false;
+        isFinished = false;
+        totalStartTime = 0;
+        totalElapsedPause = 0;
+        questionStartTime = 0;
+        hasAlertedQuestion = false;
+        questions = [];
+        
+        // Görselleri sıfırla
+        displayTotal.classList.remove('finished');
+        mainDisplayBox.classList.remove('finished');
+        displayCurrent.classList.remove('over-limit');
+        displayCurrent.innerText = "00:00.00";
+
+        // Moda göre ekranı ayarla
+        if (isCountdown) {
+            let mins = parseInt(inpExamTime.value) || 40;
+            displayTotal.innerText = `${mins < 10 ? '0'+mins : mins}:00.00`;
+        } else {
+            displayTotal.innerText = "00:00.00";
+        }
+        
+        renderTable();
+        updateStats();
+    }
+
+    // --- Tablo ve İstatistik ---
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        const emptyMsg = document.getElementById('emptyMsg');
+        tbody.innerHTML = "";
+        
+        if (questions.length === 0) {
+            emptyMsg.style.display = 'block';
+            return;
+        }
+        emptyMsg.style.display = 'none';
+
+        const limitMs = (parseInt(inpLimit.value) || 120) * 1000;
+
+        questions.slice().reverse().forEach(q => {
+            const tr = document.createElement('tr');
+            const isSlow = q.duration > limitMs;
+            if(isSlow) tr.classList.add('row-warning');
+
+            tr.innerHTML = `
+                <td>Soru ${q.id}</td>
+                <td>${formatTime(q.duration)}</td>
+                <td style="color:#666">${formatTime(q.totalAtEnd)}</td>
+                <td>${isSlow ? '⚠️ Yavaş' : 'Normal'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function updateStats() {
+        if (questions.length === 0) {
+            ['statCount','statAvg','statFast','statSlow'].forEach(id => document.getElementById(id).innerText = "-");
+            return;
+        }
+        document.getElementById('statCount').innerText = questions.length;
+        let totalMs = questions.reduce((sum, q) => sum + q.duration, 0);
+        document.getElementById('statAvg').innerText = formatTime(totalMs / questions.length);
+
+        let sorted = [...questions].sort((a, b) => a.duration - b.duration);
+        document.getElementById('statFast').innerText = formatTime(sorted[0].duration);
+        document.getElementById('statSlow').innerText = formatTime(sorted[sorted.length - 1].duration);
+    }
+
+    // --- .TXT İndir ---
+    function downloadTxt() {
+        const ders = document.getElementById('inpDers').value || "Belirtilmedi";
+        const konu = document.getElementById('inpKonu').value || "Belirtilmedi";
+        const yayin = document.getElementById('inpYayin').value || "Belirtilmedi";
+        const limitMs = (parseInt(inpLimit.value) || 120) * 1000;
+        
+        let content = `Ders: ${ders}  Konu: ${konu}  Yayınevi: ${yayin}\n`;
+        content += `Mod: ${isCountdown ? 'Geri Sayım' : 'Serbest Çalışma'}\n\n`;
+
+        questions.forEach(q => {
+            content += `Soru ${q.id}: ${formatTextDuration(q.duration)}\n`;
+        });
+
+        content += `\n${Math.floor(limitMs/1000/60)} dakikayı geçen sorular\n`;
+        let slowQuestions = questions.filter(q => q.duration > limitMs);
+        if(slowQuestions.length === 0) content += "Yok\n";
+        slowQuestions.forEach(q => {
+            content += `Soru ${q.id}: ${formatTextDuration(q.duration)}\n`;
+        });
+
+        if(questions.length > 0) {
+            let sorted = [...questions].sort((a, b) => a.duration - b.duration);
+            let totalMs = questions.reduce((sum, q) => sum + q.duration, 0);
+
+            content += `\nEn yavaş: Soru ${sorted[sorted.length-1].id} (${formatTextDuration(sorted[sorted.length-1].duration)})`;
+            content += `\nEn hızlı: Soru ${sorted[0].id} (${formatTextDuration(sorted[0].duration)})`;
+            
+            let totSec = Math.floor(totalMs/1000);
+            let h = Math.floor(totSec/3600);
+            let m = Math.floor((totSec%3600)/60);
+            let s = totSec % 60;
+            content += `\nToplam Çözüm Süresi: ${h} sa ${m} dk ${s} sn`;
+            content += `\nOrtalama: ${formatTextDuration(totalMs/questions.length)}\n`;
+        }
+
+        let now = new Date();
+        content += `\nTarih: ${now.toLocaleDateString('tr-TR')} Saat: ${now.toLocaleTimeString('tr-TR')}`;
+
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `Sinav_Takip_${ders}_${Date.now()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // --- Klavye Kısayolları ---
+    document.addEventListener('keydown', (e) => {
+        if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+        if (e.code === 'Space') {
+            e.preventDefault();
+            nextQuestion();
+        } else if (e.code === 'KeyS') {
+            if(isRunning) stopTimer();
+            else startTimer();
+        } else if (e.code === 'KeyR') {
+            resetAll();
+        } else if (e.code === 'Backspace') {
+            undoLast();
+        }
+    });
+
+    // Sayfa yüklenince ilk moda göre ayarla
+    toggleMode();
+
+</script>
+</body>
+</html>
