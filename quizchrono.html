@@ -527,7 +527,8 @@
 
     function undoLast() {
         if (questions.length === 0) return;
-        questions.pop();
+        const lastQ = questions.pop();
+        questionStartTime -= lastQ.duration;
         renderTable();
         updateStats();
     }
