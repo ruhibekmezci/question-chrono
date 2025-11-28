@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=download" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Soru Süre Ölçer Ultimate</title>
@@ -141,8 +142,8 @@
         .btn-start { background-color: var(--accent); }
         .btn-next { background-color: var(--primary); }
         .btn-stop { background-color: #636e72; }
-        .btn-reset { background-color: transparent; border: 1px solid #636e72; }
-        .btn-undo { background-color: transparent; border: 1px solid #d63031; color: #d63031; }
+        .btn-reset { background-color: #7f021f; border: 1px solid #636e72; }
+        .btn-undo { background-color: #7f021f; border: 1px solid #636e72; }
         .btn-export { background-color: #2d3436; border: 1px solid var(--text-muted); margin-left: auto; }
 
         /* Stats & Table */
@@ -208,7 +209,7 @@
         </div>
         <div class="input-group">
             <label>Sınav Süresi (Dk)</label>
-            <input type="number" id="inpExamTime" value="40" disabled title="Sadece Geri Sayım modunda aktif">
+            <input type="number" id="inpExamTime" value="40" disabled title="Sadece Geri Sayım modunda aktif" oninput="updateStartupTime()">
         </div>
         <div class="input-group">
             <label>Soru Limiti (Sn)</label>
@@ -266,7 +267,10 @@
 
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <h3 style="margin:0">Soru Detayları</h3>
-        <button class="btn-export" onclick="downloadTxt()">📥 .TXT İndir</button>
+        <button class="btn-export" onclick="downloadTxt()">
+            <span class="material-symbols-outlined">download</span>
+            Rapor İndir
+        </button>
     </div>
 
     <table class="results-table">
@@ -285,48 +289,36 @@
 </div>
 
 <script>
-    // --- Ses Sistemi (Audio Context) ---
+    // --- Ses Sistemi ---
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioContext();
 
-    // Soru limiti uyarısı (Kısa Bip)
     function playShortBeep() {
         if(audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        
         osc.type = 'square';
         osc.frequency.setValueAtTime(880, audioCtx.currentTime);
         gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
-        
         osc.start();
         osc.stop(audioCtx.currentTime + 0.1);
     }
 
-    // Sınav Bitiş Uyarısı (3 Kez Uzun Dııııt)
     function playFinishAlarm() {
         if(audioCtx.state === 'suspended') audioCtx.resume();
-        
         const now = audioCtx.currentTime;
-        
-        // 3 kez çalacak döngü
         for (let i = 0; i < 3; i++) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-            
-            // Ayarlar: Düşük frekans (kalın ses) ve uzun süre
-            osc.type = 'sawtooth'; // Biraz daha cızırtılı/alarm gibi
-            osc.frequency.setValueAtTime(220, now + (i * 1.5)); // 220Hz = Kalın La
-            
-            // Ses seviyesi
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, now + (i * 1.5)); 
             gain.gain.setValueAtTime(0.2, now + (i * 1.5));
-            gain.gain.linearRampToValueAtTime(0.0001, now + (i * 1.5) + 1.0); // 1 saniye sürsün
-
+            gain.gain.linearRampToValueAtTime(0.0001, now + (i * 1.5) + 1.0); 
             osc.start(now + (i * 1.5));
             osc.stop(now + (i * 1.5) + 1.0);
         }
@@ -335,20 +327,20 @@
     // --- Değişkenler ---
     let interval = null;
     let isRunning = false;
-    let isFinished = false; // Sınav süresi bitti mi?
+    let isFinished = false; 
     
     let totalStartTime = 0; 
     let totalElapsedPause = 0; 
     let lastPauseStart = 0; 
 
     let questionStartTime = 0; 
-    let hasAlertedQuestion = false; // Soru limiti uyarısı çaldı mı?
+    let hasAlertedQuestion = false; 
 
     let questions = []; 
     
     // Mod Değişkenleri
     let isCountdown = false;
-    let examDurationMs = 0; // Geri sayım için toplam süre
+    let examDurationMs = 0; 
 
     // DOM Elementleri
     const displayTotal = document.getElementById('displayTotal');
@@ -359,23 +351,32 @@
     const selMode = document.getElementById('selMode');
     const lblTotalType = document.getElementById('lblTotalType');
 
-    // --- Mod Değişimi ---
+    // --- Mod Değişimi & Giriş Güncellemesi ---
     function toggleMode() {
-        resetAll(); // Mod değişince her şeyi sıfırla
+        resetAll(); 
         if (selMode.value === 'down') {
             isCountdown = true;
             inpExamTime.disabled = false;
             lblTotalType.innerText = "KALAN SINAV SÜRESİ";
-            
-            // Başlangıçta süreyi göster
-            let mins = parseInt(inpExamTime.value) || 40;
-            displayTotal.innerText = `${mins < 10 ? '0'+mins : mins}:00.00`;
+            // İlk açılışta süreyi göster
+            updateStartupTime();
         } else {
             isCountdown = false;
             inpExamTime.disabled = true;
             lblTotalType.innerText = "TOPLAM GEÇEN SÜRE";
             displayTotal.innerText = "00:00.00";
         }
+    }
+
+    // YENİ: Inputa girilen süreyi anlık olarak ekrana yansıtır
+    function updateStartupTime() {
+        if (!isCountdown || isRunning) return; // Çalışırken veya yanlış modda elleme
+
+        let mins = parseInt(inpExamTime.value);
+        if (isNaN(mins) || mins < 1) mins = 1;
+
+        // Dakikayı ms'ye çevirip formatTime ile ekrana yaz
+        displayTotal.innerText = formatTime(mins * 60 * 1000);
     }
 
     // --- Formatlama ---
@@ -387,7 +388,7 @@
         let s = date.getUTCSeconds().toString().padStart(2, '0');
         let cs = Math.floor(date.getUTCMilliseconds() / 10).toString().padStart(2, '0');
         
-        if (h > 0) return `${h}:${m}:${s}.${cs}`; // Saat varsa göster
+        if (h > 0) return `${h}:${m}:${s}.${cs}`; 
         return `${m}:${s}.${cs}`;
     }
 
@@ -401,36 +402,29 @@
         return parts.join(' ');
     }
 
-    // --- Ana Döngü (Update) ---
+    // --- Ana Döngü ---
     function update() {
         if (!isRunning) return;
 
         const now = Date.now();
-        const elapsedSession = now - totalStartTime - totalElapsedPause; // Geçen gerçek süre
+        const elapsedSession = now - totalStartTime - totalElapsedPause; 
         
-        // 1. Büyük Sayaç Mantığı
         if (isCountdown) {
-            // Geri Sayım Modu
             let remaining = examDurationMs - elapsedSession;
-            
             if (remaining <= 0) {
-                // SÜRE BİTTİ
                 remaining = 0;
                 displayTotal.innerText = formatTime(0);
-                finishExam(); // Fonksiyonu çağır
+                finishExam(); 
                 return;
             }
             displayTotal.innerText = formatTime(remaining);
         } else {
-            // Kronometre Modu
             displayTotal.innerText = formatTime(elapsedSession);
         }
 
-        // 2. Aktif Soru Süresi
         const currentDuration = now - questionStartTime;
         displayCurrent.innerText = formatTime(currentDuration);
 
-        // 3. Soru Limiti Kontrolü (Sadece bitmemişse)
         if (!isFinished) {
             const limitSec = parseInt(inpLimit.value) || 120;
             if (currentDuration > limitSec * 1000) {
@@ -445,26 +439,20 @@
         }
     }
 
-    // --- Süre Bittiğinde Çalışır ---
     function finishExam() {
         stopTimer();
         isFinished = true;
-        
         displayTotal.classList.add('finished');
         mainDisplayBox.classList.add('finished');
-        
-        playFinishAlarm(); // 3 Kez Dııııt
-        
-        // Son soruyu otomatik kaydet? Genelde sınav bitince kalem bırakılır, son soru yarım kalır.
-        // İstersen buraya son soruyu kaydetme kodu ekleyebiliriz. Şimdilik durduruyoruz.
+        playFinishAlarm(); 
     }
 
     // --- Kontroller ---
     function startTimer() {
         if (isRunning || isFinished) return;
         
-        // Geri sayım modundaysak süreyi al
         if (isCountdown && totalStartTime === 0) {
+            // Başlarken inputtaki değeri al
             let mins = parseInt(inpExamTime.value) || 1;
             examDurationMs = mins * 60 * 1000;
         }
@@ -483,7 +471,6 @@
         isRunning = true;
         interval = setInterval(update, 30);
         
-        // Görsel temizlik
         displayTotal.classList.remove('finished');
         mainDisplayBox.classList.remove('finished');
     }
@@ -496,7 +483,7 @@
     }
 
     function nextQuestion() {
-        if (isFinished) return; // Sınav bittiyse yeni soruya geçilmez
+        if (isFinished) return; 
         if (!isRunning && totalStartTime === 0) {
             startTimer();
             return;
@@ -505,8 +492,6 @@
         const now = Date.now();
         let effectiveNow = isRunning ? now : lastPauseStart;
         const duration = effectiveNow - questionStartTime;
-        
-        // Şu ana kadar geçen toplam süre (kronometre modundaysak direkt, geri sayımdaysak toplamdan kalanı çıkararak değil, geçen süreyi hesaplayarak)
         const totalDurationSoFar = effectiveNow - totalStartTime - totalElapsedPause;
 
         questions.push({
@@ -520,15 +505,22 @@
 
         questionStartTime = effectiveNow; 
         hasAlertedQuestion = false;
-        
         displayCurrent.classList.remove('over-limit');
         displayCurrent.innerText = "00:00.00";
     }
 
+    // ENTEGRE EDİLDİ: Jules'un yaptığı değişiklik
+    // Soruyu silerken süreyi de geri sayaca ekler (Böylece zaman kaybı olmaz)
     function undoLast() {
         if (questions.length === 0) return;
-        const lastQ = questions.pop();
-        questionStartTime -= lastQ.duration;
+        
+        const lastQ = questions.pop(); 
+        
+        // Bu satır Jules'tan eklendi:
+        // Silinen sorunun süresini mevcut soru başlangıcından çıkarıyoruz.
+        // Böylece geçen süre mevcut sayaca eklenmiş oluyor.
+        questionStartTime -= lastQ.duration; 
+        
         renderTable();
         updateStats();
     }
@@ -543,16 +535,14 @@
         hasAlertedQuestion = false;
         questions = [];
         
-        // Görselleri sıfırla
         displayTotal.classList.remove('finished');
         mainDisplayBox.classList.remove('finished');
         displayCurrent.classList.remove('over-limit');
         displayCurrent.innerText = "00:00.00";
 
-        // Moda göre ekranı ayarla
+        // Moda göre ekranı sıfırla
         if (isCountdown) {
-            let mins = parseInt(inpExamTime.value) || 40;
-            displayTotal.innerText = `${mins < 10 ? '0'+mins : mins}:00.00`;
+            updateStartupTime(); // Inputtaki değeri oku
         } else {
             displayTotal.innerText = "00:00.00";
         }
@@ -561,7 +551,7 @@
         updateStats();
     }
 
-    // --- Tablo ve İstatistik ---
+    // --- UI Güncellemeleri ---
     function renderTable() {
         const tbody = document.getElementById('tableBody');
         const emptyMsg = document.getElementById('emptyMsg');
@@ -604,7 +594,7 @@
         document.getElementById('statSlow').innerText = formatTime(sorted[sorted.length - 1].duration);
     }
 
-    // --- .TXT İndir ---
+    // Senin Özelliğin: Gelişmiş Dosya Adı ve İçeriği Korundu
     function downloadTxt() {
         const ders = document.getElementById('inpDers').value || "Belirtilmedi";
         const konu = document.getElementById('inpKonu').value || "Belirtilmedi";
@@ -646,13 +636,17 @@
         const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `Sinav_Takip_${ders}_${Date.now()}.txt`;
+        let dateStr = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
+        let safeDers = ders.replace(/\s+/g, '_'); 
+        let safeKonu = konu.replace(/\s+/g, '_');
+        let safeYayin = yayin.replace(/\s+/g, '_');
+
+        a.download = `${dateStr}_${safeDers}_${safeKonu}_${safeYayin}_QuizChrono.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
     }
 
-    // --- Klavye Kısayolları ---
     document.addEventListener('keydown', (e) => {
         if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
@@ -669,8 +663,7 @@
         }
     });
 
-    // Sayfa yüklenince ilk moda göre ayarla
-    toggleMode();
+    toggleMode(); // Başlangıç ayarı
 
 </script>
 </body>
