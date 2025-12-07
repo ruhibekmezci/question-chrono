@@ -15,7 +15,8 @@
             --primary: #0984e3;
             --danger: #d63031;
             --warning: #fdcb6e;
-            --retry: #6c5ce7; /* Yeni Buton Rengi: Mor */
+            --retry: #6c5ce7;
+            --ideal-warn: #e17055; /* İdeal süreyi aşınca turuncumsu renk */
         }
 
         body {
@@ -81,6 +82,11 @@
         .timer-display.finished {
             border-color: var(--danger);
         }
+        
+        /* İdeal süre aşımı için stil */
+        .timer-display.ideal-over {
+            border-color: var(--ideal-warn);
+        }
 
         .total-timer {
             font-size: 5rem;
@@ -92,6 +98,10 @@
         .total-timer.finished {
             color: var(--danger);
             animation: pulse 1s infinite;
+        }
+        
+        .total-timer.ideal-over {
+            color: var(--ideal-warn);
         }
 
         .total-label { color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; }
@@ -105,7 +115,7 @@
         }
         
         .current-q-timer.over-limit {
-            color: var(--warning); /* Sarı uyarı */
+            color: var(--warning);
         }
 
         @keyframes pulse {
@@ -142,7 +152,7 @@
         
         .btn-start { background-color: var(--accent); }
         .btn-next { background-color: var(--primary); }
-        .btn-retry { background-color: var(--retry); } /* Yeni Buton */
+        .btn-retry { background-color: var(--retry); }
         .btn-stop { background-color: #636e72; }
         .btn-reset { background-color: #7f021f; border: 1px solid #636e72; }
         .btn-undo { background-color: #7f021f; border: 1px solid #636e72; }
@@ -209,13 +219,19 @@
                 <option value="down">Geri Sayım (Sınav)</option>
             </select>
         </div>
+        
+        <div class="input-group">
+            <label>İdeal Süre (Dk)</label>
+            <input type="number" id="inpIdealTime" placeholder="Opsiyonel" oninput="updateIdealSettings()">
+        </div>
+
         <div class="input-group">
             <label>Sınav Süresi (Dk)</label>
-            <input type="number" id="inpExamTime" value="40" disabled title="Sadece Geri Sayım modunda aktif" oninput="updateStartupTime()">
+            <input type="number" id="inpExamTime" value="115" disabled title="Sadece Geri Sayım modunda aktif" oninput="updateStartupTime()">
         </div>
         <div class="input-group">
             <label>Soru Limiti (Sn)</label>
-            <input type="number" id="inpLimit" value="120">
+            <input type="number" id="inpLimit" value="60">
         </div>
         
         <div class="input-group">
@@ -230,6 +246,10 @@
             <label>Yayınevi</label>
             <input type="text" id="inpYayin" placeholder="X Yayınları">
         </div>
+        <div class="input-group">
+            <label>Test No</label>
+            <input type="text" id="inpTestNo" placeholder="Test 1">
+        </div>
     </div>
 
     <div class="timer-display" id="mainDisplayBox">
@@ -242,12 +262,10 @@
         <div class="controls">
             <button class="btn-start" onclick="startTimer()">▶ Başlat</button>
             <button class="btn-next" onclick="nextQuestion()">⏭ Yeni Soru (Space)</button>
-            
             <button class="btn-retry" onclick="restartQuestion()">
                 <span class="material-symbols-outlined" style="font-size:1.2rem;">refresh</span>
                 Soruyu Sıfırla (Del)
             </button>
-
             <button class="btn-stop" onclick="stopTimer()">⏸ Durdur (S)</button>
             <button class="btn-undo" onclick="undoLast()">↶ Geri Al</button>
             <button class="btn-reset" onclick="resetAll()">↻ Sıfırla (R)</button>
@@ -342,10 +360,12 @@
 
     let questionStartTime = 0; 
     let hasAlertedQuestion = false; 
+    let hasAlertedIdeal = false; // İdeal süre alarmı çaldı mı?
 
     let questions = []; 
     let isCountdown = false;
     let examDurationMs = 0; 
+    let idealDurationMs = 0; // İdeal Süre (ms cinsinden)
 
     // DOM Elementleri
     const displayTotal = document.getElementById('displayTotal');
@@ -353,6 +373,8 @@
     const mainDisplayBox = document.getElementById('mainDisplayBox');
     const inpLimit = document.getElementById('inpLimit');
     const inpExamTime = document.getElementById('inpExamTime');
+    const inpIdealTime = document.getElementById('inpIdealTime'); // Yeni Input
+    const inpTestNo = document.getElementById('inpTestNo');
     const selMode = document.getElementById('selMode');
     const lblTotalType = document.getElementById('lblTotalType');
 
@@ -361,11 +383,13 @@
         if (selMode.value === 'down') {
             isCountdown = true;
             inpExamTime.disabled = false;
+            inpIdealTime.disabled = true; // Geri sayımda ideal süre yok (süre zaten limit)
             lblTotalType.innerText = "KALAN SINAV SÜRESİ";
             updateStartupTime();
         } else {
             isCountdown = false;
             inpExamTime.disabled = true;
+            inpIdealTime.disabled = false; // Kronometrede ideal süre var
             lblTotalType.innerText = "TOPLAM GEÇEN SÜRE";
             displayTotal.innerText = "00:00.00";
         }
@@ -376,6 +400,13 @@
         let mins = parseInt(inpExamTime.value);
         if (isNaN(mins) || mins < 1) mins = 1;
         displayTotal.innerText = formatTime(mins * 60 * 1000);
+    }
+
+    function updateIdealSettings() {
+        // İdeal süreyi değişkene al
+        let mins = parseInt(inpIdealTime.value);
+        if (isNaN(mins) || mins < 1) idealDurationMs = 0;
+        else idealDurationMs = mins * 60 * 1000;
     }
 
     function formatTime(ms) {
@@ -405,6 +436,7 @@
         const now = Date.now();
         const elapsedSession = now - totalStartTime - totalElapsedPause; 
         
+        // 1. Ana Sayaç Mantığı
         if (isCountdown) {
             let remaining = examDurationMs - elapsedSession;
             if (remaining <= 0) {
@@ -415,9 +447,36 @@
             }
             displayTotal.innerText = formatTime(remaining);
         } else {
+            // Kronometre Modu
             displayTotal.innerText = formatTime(elapsedSession);
+            
+            // --- İDEAL SÜRE KONTROLÜ (Yeni) ---
+            if (idealDurationMs > 0) {
+                if (elapsedSession > idealDurationMs) {
+                    // İdeal süre aşıldı!
+                    let overTime = elapsedSession - idealDurationMs;
+                    
+                    // Ekranı güncelle: Ne kadar aştığını göster
+                    lblTotalType.innerText = `İDEAL SÜREYİ AŞTIN (+${formatTime(overTime)})`;
+                    
+                    displayTotal.classList.add('ideal-over');
+                    mainDisplayBox.classList.add('ideal-over');
+
+                    // Sadece bir kez alarm çal
+                    if (!hasAlertedIdeal) {
+                        playFinishAlarm(); 
+                        hasAlertedIdeal = true;
+                    }
+                } else {
+                    // Henüz aşılmadıysa normal görünüm
+                    lblTotalType.innerText = "TOPLAM GEÇEN SÜRE";
+                    displayTotal.classList.remove('ideal-over');
+                    mainDisplayBox.classList.remove('ideal-over');
+                }
+            }
         }
 
+        // 2. Aktif Soru Süresi
         const currentDuration = now - questionStartTime;
         displayCurrent.innerText = formatTime(currentDuration);
 
@@ -436,6 +495,20 @@
     }
 
     function finishExam() {
+        // Son soruyu kaydet
+        const now = Date.now();
+        const duration = now - questionStartTime;
+        const totalDurationSoFar = now - totalStartTime - totalElapsedPause;
+
+        questions.push({
+            id: questions.length + 1,
+            duration: duration,
+            totalAtEnd: totalDurationSoFar
+        });
+
+        renderTable();
+        updateStats();
+
         stopTimer();
         isFinished = true;
         displayTotal.classList.add('finished');
@@ -446,9 +519,15 @@
     function startTimer() {
         if (isRunning || isFinished) return;
         
+        // Geri Sayım Süresini Al
         if (isCountdown && totalStartTime === 0) {
             let mins = parseInt(inpExamTime.value) || 1;
             examDurationMs = mins * 60 * 1000;
+        }
+
+        // İdeal Süreyi Al (Kronometre ise)
+        if (!isCountdown) {
+             updateIdealSettings();
         }
 
         const now = Date.now();
@@ -465,8 +544,11 @@
         isRunning = true;
         interval = setInterval(update, 30);
         
+        // Görselleri temizle
         displayTotal.classList.remove('finished');
         mainDisplayBox.classList.remove('finished');
+        displayTotal.classList.remove('ideal-over');
+        mainDisplayBox.classList.remove('ideal-over');
     }
 
     function stopTimer() {
@@ -503,23 +585,28 @@
         displayCurrent.innerText = "00:00.00";
     }
 
-    // YENİ FONKSİYON: Soruyu Başa Al
     function restartQuestion() {
         const now = Date.now();
-        
+        let wastedTime = 0;
+
         if (isRunning) {
-            // Eğer çalışıyorsak, soru başlangıcını "şu an" yap.
+            wastedTime = now - questionStartTime;
+        } else {
+            wastedTime = lastPauseStart - questionStartTime;
+        }
+
+        totalStartTime += wastedTime;
+
+        if (isRunning) {
             questionStartTime = now;
         } else {
-            // Eğer duraklatılmışsak, soru başlangıcını en son durduğumuz ana çek.
-            // Böylece süre 0'mış gibi davranır.
             questionStartTime = lastPauseStart;
         }
-        
-        // Görsel sıfırlama
+
         displayCurrent.innerText = "00:00.00";
         displayCurrent.classList.remove('over-limit');
         hasAlertedQuestion = false;
+        update(); 
     }
 
     function undoLast() {
@@ -538,12 +625,18 @@
         totalElapsedPause = 0;
         questionStartTime = 0;
         hasAlertedQuestion = false;
+        hasAlertedIdeal = false; // İdeal süre uyarısını sıfırla
         questions = [];
         
         displayTotal.classList.remove('finished');
         mainDisplayBox.classList.remove('finished');
+        displayTotal.classList.remove('ideal-over');
+        mainDisplayBox.classList.remove('ideal-over');
+        
         displayCurrent.classList.remove('over-limit');
         displayCurrent.innerText = "00:00.00";
+        
+        lblTotalType.innerText = isCountdown ? "KALAN SINAV SÜRESİ" : "TOPLAM GEÇEN SÜRE";
 
         if (isCountdown) {
             updateStartupTime(); 
@@ -601,16 +694,36 @@
         const ders = document.getElementById('inpDers').value || "Belirtilmedi";
         const konu = document.getElementById('inpKonu').value || "Belirtilmedi";
         const yayin = document.getElementById('inpYayin').value || "Belirtilmedi";
-        const limitMs = (parseInt(inpLimit.value) || 120) * 1000;
+        const testNo = document.getElementById('inpTestNo').value || "Belirtilmedi";
+        const limitSec = parseInt(inpLimit.value) || 120;
+        const limitMs = limitSec * 1000;
         
         let content = `Ders: ${ders}  Konu: ${konu}  Yayınevi: ${yayin}\n`;
-        content += `Mod: ${isCountdown ? 'Geri Sayım' : 'Serbest Çalışma'}\n\n`;
+        content += `Mod: ${isCountdown ? 'Geri Sayım' : 'Serbest Çalışma (Kronometre)'}\n`;
+        content += `Test No: ${testNo}\n`;
+        
+        // Rapora İdeal Süre Bilgisini de ekleyelim
+        if(!isCountdown && idealDurationMs > 0) {
+             content += `Hedeflenen İdeal Süre: ${Math.floor(idealDurationMs/60000)} dakika\n`;
+        }
+        content += `\n`;
 
         questions.forEach(q => {
             content += `Soru ${q.id}: ${formatTextDuration(q.duration)}\n`;
         });
 
-        content += `\n${Math.floor(limitMs/1000/60)} dakikayı geçen sorular\n`;
+        let limitTitle = "";
+        if(limitSec < 60) {
+            limitTitle = `${limitSec} saniyeyi geçen sorular`;
+        } else {
+            let m = Math.floor(limitSec / 60);
+            let s = limitSec % 60;
+            if(s === 0) limitTitle = `${m} dakikayı geçen sorular`;
+            else limitTitle = `${m} dakika ${s} saniyeyi geçen sorular`;
+        }
+
+        content += `\n${limitTitle}\n`;
+        
         let slowQuestions = questions.filter(q => q.duration > limitMs);
         if(slowQuestions.length === 0) content += "Yok\n";
         slowQuestions.forEach(q => {
@@ -642,8 +755,9 @@
         let safeDers = ders.replace(/\s+/g, '_'); 
         let safeKonu = konu.replace(/\s+/g, '_');
         let safeYayin = yayin.replace(/\s+/g, '_');
+        let safeTestNo = testNo.replace(/\s+/g, '_');
 
-        a.download = `${dateStr}_${safeDers}_${safeKonu}_${safeYayin}_QuizChrono.txt`;
+        a.download = `${dateStr}_${safeDers}_${safeKonu}_${safeYayin}_${safeTestNo}_QuizChrono.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
